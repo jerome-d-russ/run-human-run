@@ -1,0 +1,170 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <title>hello phaser!</title>
+        <script src="phaser/build/phaser.min.js"></script>
+        <script src="src/vjoy.js"></script>
+        <script src="/socket.io/socket.io.js"></script>
+        <script>
+          var socket = io();
+          socket.emit ('server', {});
+          socket.on('new user', function(msg){
+            var tint;
+            var x;
+            var y;
+            if(drones.total == 0){
+              tint = 0x00ff00;
+              x = 0;
+              y = 0;
+            } else {
+              var needZombie = true;
+              drones.forEach(function(item){
+                if(item.tint == 0x00ff00){
+                  needZombie = false;
+                }
+              });
+              if(needZombie){
+                tint = 0x00ff00;
+                x = 0;
+                y = 0;
+              } else {
+                tint = 0xff0000;
+                x = 500 + (drones.total * 10);
+                y = 500 + (drones.total * 10);
+              }
+            }
+            var drone = drones.create(x,y,'drone');
+            drone.animations.add('fly');
+            drone.animations.play('fly', 30, true);
+            drone.body.collideWorldBounds = true;
+            drone.body.bounce.setTo(0.9, 0.9);
+            drone.scale.setTo(.5,.5);
+            drone.anchor.setTo(.5,.5);
+            drone.inputEnabled = true;
+            drone.id = msg;
+            drone.tint = tint;
+            drone.body.onCollide = new Phaser.Signal();
+            drone.body.onCollide.add(function(sprite1, sprite2){
+              if(sprite1.tint == 0x00ff00 && sprite2.tint == 0xff0000){
+                zombie(sprite2);
+              } else if(sprite2.tint == 0x00ff00 && sprite1.tint == 0xff0000){
+                zombie(sprite1);
+              }
+            }, this);
+            function zombie(sprite){
+              sprite.tint = 0x00ff00;
+              var spin = game.add.tween(sprite).to({angle:360},1000, Phaser.Easing.Linear.None, true, 0, 0, false);
+              spin.onComplete.add(function(){
+                var endGame = true;
+                drones.forEach(function(item){
+                  if(item.tint == 0xff0000){
+                    endGame = false;
+                  }
+                })
+                if(endGame){
+                  alert('Game Over!');
+                }
+              });
+            }
+          });
+          socket.on('server acknowledge', function(msg){
+            server = true;
+          });
+          socket.on('move', function(cursors){
+            var invalid = true;
+            drones.forEach(function(item) {
+              if(item.id == cursors.id){
+                var speed = 3;
+                if (cursors.left) {
+                  item.x = item.x - (1 * speed);
+                } else if (cursors.right) {
+                  item.x = item.x + (1 * speed);
+                }
+
+                if (cursors.up) {
+                  item.y = item.y - (1 * speed);
+                } else if (cursors.down) {
+                  item.y = item.y + (1 * speed);
+                }
+                invalid = false;
+              }
+            });
+            if(invalid){
+              socket.emit('invalid', cursors.id);
+            }
+          });
+          socket.on('remove', function(socketId){
+              drones.forEach(function(item) {
+                if(item.id == socketId){
+                 drones.remove(item);
+                }
+              });
+          });
+        </script>
+        <style>
+          canvas {
+              padding: 0;
+              margin: auto;
+              display: block;
+              width: 800px;
+              height: 600px;
+              position: absolute;
+              top: 0;
+              bottom: 0;
+              left: 0;
+              right: 0;
+          }
+        </style>
+    </head>
+    <body>
+
+    <script type="text/javascript">
+var game;
+    window.onload = function() {
+
+        // other methods include: pause, pauseUpdate, prerender (after update before any rendering), render (final post-processing), resize, resumed, shutdown,
+        game = new Phaser.Game(1024, 728, Phaser.AUTO, '', { preload: preload, create: create, update: update });
+        server = false;
+
+        function preload () {
+          game.stage.disableVisibilityChange = true;
+          game.load.image('logo', './assets/phaser.png');
+          game.load.spritesheet('drone', './assets/drone.png', 128, 128, 3); // 128x128 with 3 frames (option param)
+          game.load.image('vjoy_base', 'demo/assets/base.png');
+          game.load.image('vjoy_body', 'demo/assets/body.png');
+          game.load.image('vjoy_cap', 'demo/assets/cap.png');
+        }
+
+        function create () {
+          var logo = game.add.sprite(game.world.centerX, game.world.centerY, 'logo');
+          logo.anchor.setTo(0.5, 0.5);
+
+          drones = game.add.group();
+          drones.enableBody = true;
+          drones.physicsBodyType = Phaser.Physics.ARCADE;
+
+          game.physics.startSystem(Phaser.Physics.ARCADE);
+          game.physics.arcade.enable(drones);
+
+          game.vjoy = game.plugins.add(Phaser.Plugin.VJoy);
+          game.vjoy.inputEnable();
+        }
+
+        function update() {
+          if(server){
+            game.physics.arcade.collide(drones);
+          } else {
+            var cursors = game.vjoy.cursors;
+            if(cursors.left || cursors.right || cursors.up || cursors.down){
+              socket.emit ('move', cursors);
+            }
+          }
+        }
+
+    };
+
+    </script>
+
+    </body>
+</html>
