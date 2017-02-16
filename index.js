@@ -51,6 +51,7 @@ io.on('connection', function(socket){
   });
 });
 
-http.listen(3000, function(){
-  console.log('listening on *:3000');
+var port = process.env.sort || 3000;
+http.listen(port, function(){
+  console.log('listening on port: ' + port);
 });
