@@ -50,6 +50,6 @@ io.on('connection', function(socket){
 });
 
 var port = process.env.port || 3000;
-var server = http.listen(port, function(){
+http.listen(port, function(){
   console.log('listening on port: ' + port);
 });
