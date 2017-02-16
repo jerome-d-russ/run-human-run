@@ -3,9 +3,9 @@ var app = express();
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
 
-app.use(express.static('node_modules'));
-app.use(express.static('public'));
-app.use(express.static('bower_components/vjoy'));
+app.use(express.static(__dirname + '/node_modules'));
+app.use(express.static(__dirname + '/public'));
+app.use(express.static(__dirname + '/bower_components/vjoy'));
 
 app.get('/', function(req, res){
   res.sendfile('index.html');
