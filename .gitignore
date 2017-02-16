@@ -3,6 +3,9 @@ logs
 *.log
 npm-debug.log*
 
+# Bower
+bower_components*
+
 # Runtime data
 pids
 *.pid
